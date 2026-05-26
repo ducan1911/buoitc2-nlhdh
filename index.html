@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buổi 8 — BIOS/UEFI - Hệ Thống Khởi Động</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f19;
+  --surface: rgba(22, 27, 38, 0.7);
+  --surface2: rgba(30, 37, 51, 0.8);
+  --border: rgba(88, 166, 255, 0.12);
+  --border-hover: rgba(88, 166, 255, 0.3);
+  --accent: #58a6ff;
+  --accent2: #2ea043;
+  --accent3: #d29922;
+  --accent4: #f85149;
+  --text: #e6edf3;
+  --text2: #8493a5;
+  --text3: #5c6c82;
+  --glow: rgba(88, 166, 255, 0.2);
+  --grid: rgba(88, 166, 255, 0.03);
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  overflow-x: hidden;
+  cursor: default;
+  line-height: 1.6;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── HEADER ─── */
+header {
+  position: relative;
+  padding: 6rem 2rem 4rem;
+  text-align: center;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.header-glow {
+  position: absolute;
+  top: -100px; left: 50%;
+  transform: translateX(-50%);
+  width: 800px; height: 400px;
+  background: radial-gradient(ellipse, rgba(88,166,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
+  filter: blur(40px);
+}
+
+.badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  border: 1px solid var(--border-hover);
+  padding: 6px 16px;
+  border-radius: 100px;
+  margin-bottom: 2rem;
+  background: rgba(88,166,255,0.05);
+  text-transform: uppercase;
+  box-shadow: 0 0 15px rgba(88,166,255,0.1);
+}
+
+h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+}
+
+h1 span { 
+  background: linear-gradient(135deg, #58a6ff, #a371f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--text2);
+  max-width: 600px;
+  margin: 0 auto 3rem;
+  line-height: 1.8;
+  font-weight: 300;
+}
+
+/* ─── NAV ─── */
+nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(11, 15, 25, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  border-color: var(--accent);
+  color: #fff;
+  background: rgba(88,166,255,0.1);
+  box-shadow: 0 0 15px rgba(88,166,255,0.15);
+  transform: translateY(-1px);
+}
+
+/* ─── MAIN LAYOUT ─── */
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+}
+
+/* ─── SECTION ─── */
+.section {
+  margin-bottom: 6rem;
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(88,166,255,0.3);
+}
+
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.card:hover { 
+  border-color: var(--border-hover); 
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.card:hover::before { opacity: 1; }
+
+.card-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-title .emoji {
+  font-size: 1.3rem;
+}
+
+.card p, .card li {
+  font-size: 15px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+.card ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.card li {
+  margin-bottom: 0.5rem;
+}
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+
+.mini-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.mini-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
+}
+
+.mini-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.mini-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.mini-card p {
+  font-size: 13.5px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* ─── WARNING BOX ─── */
+.warning-box {
+  background: rgba(248, 81, 73, 0.08);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.warning-box .title {
+  color: var(--accent4);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.warning-box p {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+/* ─── INFO BOX ─── */
+.info-box {
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.info-box .title {
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-box p {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+/* ─── CODE BLOCK ─── */
+.code-block {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  overflow-x: auto;
+}
+
+/* ─── STEP BOX ─── */
+.step-box {
+  background: var(--surface2);
+  border-left: 3px solid var(--accent2);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+
+.step-box .step-title {
+  color: var(--accent2);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 15px;
+}
+
+.step-box p {
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ─── BEEP TABLE ─── */
+.beep-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.beep-table th,
+.beep-table td {
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.beep-table th {
+  background: var(--surface2);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.beep-table td {
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.beep-table tr:hover {
+  background: rgba(88, 166, 255, 0.05);
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  header { padding: 4rem 1.5rem 3rem; }
+  h1 { font-size: 2rem; }
+  .section-title { font-size: 1.5rem; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ─── FOOTER ─── */
+footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text3);
+  font-size: 14px;
+  border-top: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-glow"></div>
+  <div class="badge">BUỔI 8</div>
+  <h1><span>BIOS/UEFI</span> — Hệ Thống Khởi Động</h1>
+  <p class="subtitle">Hiểu về firmware đầu tiên chạy khi bật máy tính, cách vào BIOS/UEFI, và vai trò của nó trong bảo mật hệ thống</p>
+</header>
+
+<nav>
+  <a href="#intro" class="nav-btn active">Giới thiệu</a>
+  <a href="#bios-vs-uefi" class="nav-btn">BIOS vs UEFI</a>
+  <a href="#post" class="nav-btn">POST</a>
+  <a href="#boot-order" class="nav-btn">Boot Order</a>
+  <a href="#security" class="nav-btn">Bảo mật</a>
+  <a href="#practice" class="nav-btn">Thực hành</a>
+</nav>
+
+<main>
+
+<!-- ===== GIỚI THIỆU ===== -->
+<section id="intro" class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2 class="section-title">BIOS là gì?</h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">🔧</span>
+      <span>Basic Input/Output System</span>
+    </div>
+    <p><strong>BIOS</strong> (Basic Input/Output System) là chương trình firmware đầu tiên được thực thi khi bạn bấm nút nguồn máy tính. Nó nằm trên chip ROM của mainboard và có nhiệm vụ khởi động phần cứng, kiểm tra hệ thống, rồi tìm và khởi chạy hệ điều hành.</p>
+  </div>
+
+  <div class="info-box">
+    <div class="title">💡 Vị trí của BIOS</div>
+    <p>BIOS được lưu trữ trong chip ROM (Read-Only Memory) hoặc Flash Memory trên mainboard. Nó hoạt động độc lập với ổ cứng, vì vậy ngay cả khi không có HDD/SSD, BIOS vẫn chạy được.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">⚙️</span>
+      <span>Vai trò của BIOS/UEFI</span>
+    </div>
+    <ul>
+      <li><strong>Khởi động phần cứng:</strong> Cấp nguồn và kích hoạt CPU, RAM, ổ cứng, GPU</li>
+      <li><strong>POST (Power-On Self Test):</strong> Kiểm tra phần cứng có hoạt động bình thường không</li>
+      <li><strong>Tìm hệ điều hành:</strong> Quét các thiết bị lưu trữ theo thứ tự Boot Order</li>
+      <li><strong>Chuyển quyền điều khiển:</strong> Khi tìm thấy HĐH, BIOS giao quyền điều khiển cho bootloader của HĐH</li>
+    </ul>
+  </div>
+
+</section>
+
+<!-- ===== BIOS vs UEFI ===== -->
+<section id="bios-vs-uefi" class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2 class="section-title">BIOS cũ vs UEFI mới</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="mini-card">
+      <div class="mini-label">Legacy BIOS</div>
+      <div class="mini-val">BIOS Cổ điển</div>
+      <p><strong>Ưu điểm:</strong> Đơn giản, tương thích rộng với phần cứng cũ</p>
+      <p style="margin-top: 0.5rem;"><strong>Nhược điểm:</strong> Giao diện text, chậm, chỉ hỗ trợ ổ đĩa ≤2TB (MBR), không có Secure Boot</p>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-label">Modern UEFI</div>
+      <div class="mini-val">UEFI Hiện đại</div>
+      <p><strong>Ưu điểm:</strong> Giao diện đồ họa, boot nhanh hơn, hỗ trợ ổ >2TB (GPT), Secure Boot, hỗ trợ chuột</p>
+      <p style="margin-top: 0.5rem;"><strong>Nhược điểm:</strong> Không tương thích với phần cứng quá cũ</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">📊</span>
+      <span>So sánh chi tiết</span>
+    </div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+      <tr style="background: var(--surface2);">
+        <th style="padding: 0.75rem; border: 1px solid var(--border); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;">Tiêu chí</th>
+        <th style="padding: 0.75rem; border: 1px solid var(--border); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;">Legacy BIOS</th>
+        <th style="padding: 0.75rem; border: 1px solid var(--border); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;">UEFI</th>
+      </tr>
+      <tr>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text);">Giao diện</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Text only, keyboard</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">GUI, hỗ trợ chuột</td>
+      </tr>
+      <tr>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text);">Tốc độ boot</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Chậm (20-30s)</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Nhanh (5-10s)</td>
+      </tr>
+      <tr>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text);">Phân vùng</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">MBR (≤2TB, 4 primary)</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">GPT (>2TB, 128 partition)</td>
+      </tr>
+      <tr>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text);">Bảo mật</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Không có Secure Boot</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Có Secure Boot, TPM</td>
+      </tr>
+      <tr>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text);">Yêu cầu Windows 11</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Không hỗ trợ</td>
+        <td style="padding: 0.75rem; border: 1px solid var(--border); color: var(--text2);">Bắt buộc</td>
+      </tr>
+    </table>
+  </div>
+
+</section>
+
+<!-- ===== POST ===== -->
+<section id="post" class="section">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2 class="section-title">POST - Power-On Self Test</h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">🔍</span>
+      <span>Quy trình kiểm tra phần cứng</span>
+    </div>
+    <p>POST là quá trình tự kiểm tra mà BIOS/UEFI thực hiện ngay sau khi bật máy. Nó kiểm tra từng linh kiện phần cứng xem có hoạt động bình thường không.</p>
+    
+    <div style="margin-top: 1.5rem;">
+      <div class="step-box">
+        <div class="step-title">Bước 1: Kiểm tra CPU</div>
+        <p>Xác nhận CPU hoạt động và có thể thực thi lệnh</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Bước 2: Kiểm tra RAM</div>
+        <p>Test các module RAM, đảm bảo không có lỗi memory</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Bước 3: Kiểm tra Card đồ họa</div>
+        <p>Xác nhận GPU/iGPU hoạt động, hiển thị được hình ảnh</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Bước 4: Kiểm tra các thiết bị I/O</div>
+        <p>Keyboard, mouse, ổ cứng, USB devices</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Bước 5: Tìm bootable device</div>
+        <p>Quét các thiết bị theo Boot Order để tìm hệ điều hành</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">🔊</span>
+      <span>Tiếng Beep - Mã lỗi POST</span>
+    </div>
+    <p>Khi POST phát hiện lỗi, mainboard sẽ phát ra các tiếng beep khác nhau để thông báo. Đây là cách chẩn đoán lỗi phần cứng khi màn hình không hiển thị gì.</p>
+    
+    <table class="beep-table" style="margin-top: 1rem;">
+      <tr>
+        <th>Mã Beep</th>
+        <th>Ý nghĩa</th>
+        <th>Cách khắc phục</th>
+      </tr>
+      <tr>
+        <td>1 tiếng ngắn</td>
+        <td>✅ POST thành công, hệ thống OK</td>
+        <td>Không cần khắc phục</td>
+      </tr>
+      <tr>
+        <td>2 tiếng ngắn</td>
+        <td>⚠️ Lỗi RAM hoặc RAM không được cắm đúng</td>
+        <td>Kiểm tra lại RAM, cắm lại hoặc thử thanh khác</td>
+      </tr>
+      <tr>
+        <td>3 tiếng ngắn</td>
+        <td>⚠️ Lỗi RAM (thường là bank đầu tiên)</td>
+        <td>Thay RAM hoặc đổi slot</td>
+      </tr>
+      <tr>
+        <td>Liên tục dài</td>
+        <td>🚨 RAM không được phát hiện hoặc hỏng hoàn toàn</td>
+        <td>Kiểm tra kỹ RAM, slot RAM, hoặc thay RAM mới</td>
+      </tr>
+      <tr>
+        <td>1 dài 2 ngắn</td>
+        <td>🚨 Lỗi card đồ họa (VGA)</td>
+        <td>Kiểm tra kết nối GPU, thử cắm lại hoặc dùng iGPU</td>
+      </tr>
+      <tr>
+        <td>1 dài 3 ngắn</td>
+        <td>🚨 Lỗi card đồ họa hoặc không tìm thấy monitor</td>
+        <td>Kiểm tra dây cáp màn hình, GPU</td>
+      </tr>
+    </table>
+    
+    <div class="info-box" style="margin-top: 1rem;">
+      <div class="title">💡 Lưu ý</div>
+      <p>Mã beep có thể khác nhau tùy hãng mainboard (AMI, Award, Phoenix). Nên tra cứu manual của mainboard để biết chính xác.</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ===== BOOT ORDER ===== -->
+<section id="boot-order" class="section">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2 class="section-title">Boot Order - Thứ tự khởi động</h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">🎯</span>
+      <span>BIOS tìm hệ điều hành ở đâu?</span>
+    </div>
+    <p>Sau khi POST hoàn tất, BIOS sẽ quét các thiết bị lưu trữ theo thứ tự ưu tiên (Boot Order) để tìm bootloader của hệ điều hành. Thiết bị nào có bootloader hợp lệ đầu tiên sẽ được khởi động.</p>
+  </div>
+
+  <div class="grid-3">
+    <div class="mini-card">
+      <div class="mini-label">Boot Option #1</div>
+      <div class="mini-val">💾 SSD/HDD</div>
+      <p>Ổ cứng chính chứa Windows/Linux. Đây là lựa chọn mặc định khi boot bình thường.</p>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-label">Boot Option #2</div>
+      <div class="mini-val">🔌 USB Drive</div>
+      <p>USB boot để cài Windows, chạy Linux live, hoặc rescue tools. Ưu tiên cao khi cài hệ điều hành.</p>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-label">Boot Option #3</div>
+      <div class="mini-val">💿 CD/DVD</div>
+      <p>Đĩa quang (hiện nay ít dùng). Trước đây dùng để cài Windows từ đĩa.</p>
+    </div>
+
+    <div class="mini-card">
+      <div class="mini-label">Boot Option #4</div>
+      <div class="mini-val">🌐 Network (PXE)</div>
+      <p>Boot qua mạng LAN. Dùng trong môi trường doanh nghiệp để cài hệ điều hành từ xa.</p>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="title">💡 Khi nào cần thay đổi Boot Order?</div>
+    <p><strong>Cài Windows/Linux:</strong> Đặt USB lên đầu để boot từ USB cài đặt</p>
+    <p><strong>Sửa lỗi boot:</strong> Boot từ USB rescue để khắc phục bootloader hỏng</p>
+    <p><strong>Dual boot:</strong> Chọn ổ đĩa nào boot trước</p>
+  </div>
+
+</section>
+
+<!-- ===== SECURITY ===== -->
+<section id="security" class="section">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2 class="section-title">Bảo mật: Secure Boot & TPM 2.0</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">
+        <span class="emoji">🔐</span>
+        <span>Secure Boot</span>
+      </div>
+      <p><strong>Secure Boot</strong> là tính năng bảo mật của UEFI, chỉ cho phép khởi động hệ điều hành và bootloader được ký số (digitally signed) bởi nhà sản xuất tin cậy.</p>
+      <p style="margin-top: 0.75rem;"><strong>Mục đích:</strong> Ngăn chặn malware/rootkit chạy trước khi HĐH khởi động (boot-level attacks).</p>
+      <p style="margin-top: 0.75rem;"><strong>Lưu ý:</strong> Windows 11 yêu cầu BẮT BUỘC Secure Boot. Một số Linux distro cần tắt Secure Boot mới cài được.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="emoji">🔑</span>
+        <span>TPM 2.0</span>
+      </div>
+      <p><strong>TPM (Trusted Platform Module)</strong> là chip bảo mật phần cứng trên mainboard, lưu trữ khóa mã hóa và chứng chỉ bảo mật.</p>
+      <p style="margin-top: 0.75rem;"><strong>Chức năng:</strong></p>
+      <ul style="margin-top: 0.5rem;">
+        <li>Mã hóa ổ cứng (BitLocker)</li>
+        <li>Xác thực sinh trắc học (Windows Hello)</li>
+        <li>Ngăn chặn tampering (thay đổi phần cứng trái phép)</li>
+      </ul>
+      <p style="margin-top: 0.75rem;"><strong>Windows 11:</strong> Yêu cầu TPM 2.0 bắt buộc.</p>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <div class="title">⚠️ Nguy hiểm: Boot từ USB không rõ nguồn gốc</div>
+    <p>Nếu ai đó boot USB trên máy của bạn (khi không có mật khẩu BIOS), họ có thể:</p>
+    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+      <li>Cài phần mềm gián điệp, keylogger</li>
+      <li>Đánh cắp dữ liệu (nếu ổ cứng không mã hóa)</li>
+      <li>Reset mật khẩu Windows (nếu không có BitLocker)</li>
+    </ul>
+    <p style="margin-top: 0.75rem;"><strong>Giải pháp:</strong> Đặt mật khẩu BIOS + bật Secure Boot + mã hóa ổ cứng bằng BitLocker.</p>
+  </div>
+
+</section>
+
+<!-- ===== PRACTICE ===== -->
+<section id="practice" class="section">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2 class="section-title">Thực hành</h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">⌨️</span>
+      <span>Cách vào BIOS/UEFI</span>
+    </div>
+    
+    <div style="margin-top: 1rem;">
+      <p style="font-weight: 600; color: var(--text); margin-bottom: 0.75rem;">Cách 1: Nhấn phím khi khởi động (truyền thống)</p>
+      <div class="grid-2" style="margin-top: 0.5rem;">
+        <div class="mini-card">
+          <div class="mini-label">Dell, Lenovo, HP</div>
+          <div class="mini-val">F2 hoặc F10</div>
+          <p>Nhấn liên tục ngay khi logo hiện ra</p>
+        </div>
+        
+        <div class="mini-card">
+          <div class="mini-label">ASUS, MSI, Gigabyte</div>
+          <div class="mini-val">Del (Delete)</div>
+          <p>Desktop thường dùng Delete</p>
+        </div>
+        
+        <div class="mini-card">
+          <div class="mini-label">Acer</div>
+          <div class="mini-val">F2 hoặc Del</div>
+          <p>Tùy model cụ thể</p>
+        </div>
+        
+        <div class="mini-card">
+          <div class="mini-label">Boot Menu</div>
+          <div class="mini-val">F12 hoặc F11</div>
+          <p>Chọn thiết bị boot nhanh (không vào BIOS)</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+      <p style="font-weight: 600; color: var(--text); margin-bottom: 0.75rem;">Cách 2: Vào UEFI từ Windows 10/11</p>
+      <div class="step-box">
+        <div class="step-title">Bước 1</div>
+        <p>Mở Settings (Win + I) → Update & Security → Recovery</p>
+      </div>
+      <div class="step-box">
+        <div class="step-title">Bước 2</div>
+        <p>Tìm mục "Advanced startup" → nhấn "Restart now"</p>
+      </div>
+      <div class="step-box">
+        <div class="step-title">Bước 3</div>
+        <p>Chọn Troubleshoot → Advanced options → UEFI Firmware Settings → Restart</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <div class="title">⚠️ QUAN TRỌNG: CHỈ XEM, KHÔNG THAY ĐỔI!</div>
+    <p>Khi vào BIOS/UEFI lần đầu, <strong>CHỈ QUAN SÁT</strong>, không thay đổi bất kỳ cài đặt nào. Thay đổi sai có thể khiến máy không boot được hoặc hỏng phần cứng.</p>
+    <p style="margin-top: 0.5rem;">Nếu vô tình thay đổi gì, nhấn <strong>ESC</strong> hoặc chọn <strong>"Exit Without Saving"</strong> để thoát an toàn.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">🗺️</span>
+      <span>Tour BIOS/UEFI - Các Tab chính</span>
+    </div>
+    
+    <div style="margin-top: 1rem;">
+      <div class="step-box">
+        <div class="step-title">Tab MAIN (Thông tin chính)</div>
+        <p>📅 Ngày giờ hệ thống (System Date/Time)</p>
+        <p>💾 Danh sách ổ cứng được phát hiện (SATA, M.2)</p>
+        <p>⚙️ Thông tin BIOS version</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Tab BOOT (Thứ tự khởi động)</div>
+        <p>🎯 Boot Priority / Boot Order: Thứ tự tìm HĐH</p>
+        <p>🔌 Boot Option #1, #2, #3,... (SSD, USB, DVD,...)</p>
+        <p>⚡ Fast Boot: Bật/tắt khởi động nhanh</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Tab ADVANCED (Nâng cao - CHỈ XEM)</div>
+        <p>🧠 CPU Configuration: Tần số, số nhân, công nghệ ảo hóa (VT-x/AMD-V)</p>
+        <p>💾 Memory Configuration: Tần số RAM, XMP profile</p>
+        <p>⚠️ <strong>CẢNH BÁO:</strong> Không chỉnh overclock nếu không hiểu rõ!</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Tab SECURITY (Bảo mật)</div>
+        <p>🔒 Set Supervisor Password: Mật khẩu BIOS (vào BIOS)</p>
+        <p>🔐 Secure Boot Control: Bật/tắt Secure Boot</p>
+        <p>🔑 TPM Configuration: Bật/tắt TPM 2.0</p>
+      </div>
+      
+      <div class="step-box">
+        <div class="step-title">Tab EXIT (Thoát)</div>
+        <p>💾 Save Changes and Exit: Lưu thay đổi và thoát (F10)</p>
+        <p>🚫 Exit Without Saving: Thoát không lưu (ESC)</p>
+        <p>🔄 Load Setup Defaults: Khôi phục cài đặt mặc định</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">🔍</span>
+      <span>Kiểm tra phiên bản BIOS trên Windows</span>
+    </div>
+    <p>Không cần vào BIOS, bạn có thể kiểm tra phiên bản BIOS ngay trên Windows:</p>
+    
+    <div class="step-box" style="margin-top: 1rem;">
+      <div class="step-title">Cách 1: System Information</div>
+      <p>1. Nhấn <strong>Win + R</strong> → gõ <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; color: var(--accent);">msinfo32</code> → Enter</p>
+      <p>2. Xem dòng <strong>"BIOS Version/Date"</strong></p>
+    </div>
+    
+    <div class="step-box">
+      <div class="step-title">Cách 2: Command Prompt</div>
+      <p>1. Mở CMD (Win + R → cmd)</p>
+      <p>2. Gõ lệnh: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; color: var(--accent);">wmic bios get smbiosbiosversion</code></p>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="title">💡 Khi nào cần cập nhật BIOS?</div>
+    <p>BIOS update rất <strong>NGUY HIỂM</strong> nếu làm sai (có thể brick mainboard). Chỉ nên update khi:</p>
+    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+      <li>Mainboard không nhận CPU mới (cần update microcode)</li>
+      <li>Có lỗi nghiêm trọng mà BIOS update khắc phục</li>
+      <li>Cần bật tính năng mới (TPM, Resizable BAR,...)</li>
+    </ul>
+    <p style="margin-top: 0.75rem;"><strong>Lưu ý:</strong> Không bao giờ tắt máy hoặc mất điện khi đang update BIOS!</p>
+  </div>
+
+</section>
+
+<!-- ===== TÓM TẮT ===== -->
+<section class="section">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2 class="section-title">Tóm tắt</h2>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="emoji">📝</span>
+      <span>Những điều cần nhớ</span>
+    </div>
+    <ul>
+      <li><strong>BIOS/UEFI</strong> là chương trình firmware đầu tiên chạy khi bật máy, nằm trên chip mainboard</li>
+      <li><strong>POST</strong> kiểm tra phần cứng, phát tiếng beep nếu có lỗi</li>
+      <li><strong>Boot Order</strong> quyết định máy tìm HĐH ở đâu trước (SSD, USB, DVD, Network)</li>
+      <li><strong>UEFI</strong> hiện đại hơn BIOS cũ: nhanh hơn, bảo mật hơn, hỗ trợ ổ >2TB</li>
+      <li><strong>Secure Boot</strong> chỉ cho boot HĐH đáng tin cậy, ngăn malware</li>
+      <li><strong>TPM 2.0</strong> là chip bảo mật phần cứng, yêu cầu bắt buộc cho Windows 11</li>
+      <li><strong>Mật khẩu BIOS</strong> ngăn người khác vào BIOS hoặc boot từ USB</li>
+    </ul>
+  </div>
+
+  <div class="warning-box">
+    <div class="title">⚠️ An toàn khi thực hành</div>
+    <p>Khi vào BIOS/UEFI lần đầu, <strong>CHỈ XEM</strong>, không thay đổi gì. Nếu thay đổi nhầm, nhấn ESC để thoát không lưu. Không bao giờ chỉnh Voltage, Frequency, hoặc Overclock nếu chưa hiểu rõ.</p>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <p>Buổi 8: BIOS/UEFI - Hệ Thống Khởi Động | 2024</p>
+  <p style="margin-top: 0.5rem; font-size: 12px;">Tài liệu học tập - Nguyên lý Hệ điều hành & Phần cứng</p>
+</footer>
+
+<script>
+// Smooth scroll cho nav
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = this.getAttribute('href');
+    document.querySelector(target).scrollIntoView({ behavior: 'smooth' });
+    
+    // Update active state
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Scroll spy
+const sections = document.querySelectorAll('.section');
+const navBtns = document.querySelectorAll('.nav-btn');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop;
+    const sectionHeight = section.clientHeight;
+    if (pageYOffset >= sectionTop - 200) {
+      current = section.getAttribute('id');
+    }
+  });
+
+  navBtns.forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('href') === '#' + current) {
+      btn.classList.add('active');
+    }
+  });
+});
+</script>
+
+</body>
+</html>
